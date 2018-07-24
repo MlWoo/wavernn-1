@@ -22,6 +22,7 @@ OUTPUT_NODE = "Inference/Model/MuLawExpanding/mul_1:0"
 INPUT_NODE = "IteratorGetNext:1"
 TRAINING = "training:0"
 
+# dump paramters
 Weights_W = "Model/Wave-RNN/Weights_W/read:0"
 Biases_W = "Model/Wave-RNN/Biases_W/read:0"
 Weights_R = "Model/Wave-RNN/Weights_R/read:0"
@@ -56,6 +57,10 @@ Gamma_3 = "Encoder/Layer-3/batch_normalization/gamma/read:0"
 Beta_3 = "Encoder/Layer-3/batch_normalization/beta/read:0"
 Weights_3 = "Encoder/Layer-3/Conv1D/Weights/read:0"
 Biases_3 = "Encoder/Layer-3/Conv1D/Bias/read:0"
+
+# dump the results of key nodes
+Residual = "Encoder/Residual/add:0"
+Upsampleing =  "Encoder/UpsampleByRepetition/Reshape:0"
 
 @click.command()
 @click.argument("wav")
@@ -132,14 +137,32 @@ def run_wavernn(model, spectrogram, output):
             writer = tf.summary.FileWriter("./traning_graph")
             writer.add_graph(session.graph)
 
-            audio, weights_W, biases_W, weights_R, biases_R, weights_R_W, biases_R_W, weights_O_W, biases_O_W, weights_A_E, biases_A_E, moving_Var_1, moving_Mean_1, gamma_1, beta_1, weights_1, biases_1, moving_Var_2, moving_Mean_2, gamma_2, beta_2, weights_2, biases_2, moving_Var_3, moving_Mean_3, gamma_3, beta_3, weights_3, biases_3 = session.run([OUTPUT_NODE, Weights_W, Biases_W, Weights_R, Biases_R, Weights_R_W, Biases_R_W, Weights_O_W, Biases_O_W, Weights_A_E, Biases_A_E, Moving_Var_1, Moving_Mean_1, Gamma_1, Beta_1, Weights_1, Biases_1, Moving_Var_2, Moving_Mean_2, Gamma_2, Beta_2, Weights_2, Biases_2, Moving_Var_3, Moving_Mean_3, Gamma_3, Beta_3, Weights_3, Biases_3], feed_dict={
-                INPUT_NODE: [spectrogram],
-                TRAINING: True,
-            })
+            audio, residual, upsampling, \
+            weights_W, biases_W, weights_R, biases_R, weights_R_W, biases_R_W, weights_O_W, biases_O_W, \
+            weights_A_E, biases_A_E, \
+            moving_Var_1, moving_Mean_1, gamma_1, beta_1, weights_1, biases_1, \
+            moving_Var_2, moving_Mean_2, gamma_2, beta_2, weights_2, biases_2, \
+            moving_Var_3, moving_Mean_3, gamma_3, beta_3, weights_3, biases_3 \
+            = session.run([OUTPUT_NODE, Residual, Upsampleing, \
+                           Weights_W, Biases_W, Weights_R, Biases_R, Weights_R_W, Biases_R_W, Weights_O_W, Biases_O_W, \
+                           Weights_A_E, Biases_A_E, \
+                           Moving_Var_1, Moving_Mean_1, Gamma_1, Beta_1, Weights_1, Biases_1, \
+                           Moving_Var_2, Moving_Mean_2, Gamma_2, Beta_2, Weights_2, Biases_2, \
+                           Moving_Var_3, Moving_Mean_3, Gamma_3, Beta_3, Weights_3, Biases_3 \
+                          ], 
+                          feed_dict={
+                              INPUT_NODE: [spectrogram],
+                              TRAINING: True,
+                          })
             elapsed = time.time() - start_time
             generated_seconds = audio.size / SAMPLE_RATE
             path = './output_parameters.npz'
-            np.savez(path, weights_W=weights_W, biases_W=biases_W, weights_R=weights_R, biases_R=biases_R, weights_R_W=weights_R_W, biases_R_W=biases_R_W, weights_O_W=weights_O_W, biases_O_W=biases_O_W, weights_A_E=weights_A_E, biases_A_E=biases_A_E, moving_Var_1=moving_Var_1, moving_Mean_1=moving_Mean_1, gamma_1=gamma_1, beta_1=beta_1, weights_1=weights_1, biases_1=biases_1, moving_Var_2=moving_Var_2, moving_Mean_2=moving_Mean_2, gamma_2=gamma_2, beta_2=beta_2, weights_2=weights_2, biases_2=biases_2, moving_Var_3=moving_Var_3, moving_Mean_3=moving_Mean_3, gamma_3=gamma_3, beta_3=beta_3, weights_3=weights_3, biases_3=biases_3)              
+            np.savez(path, \
+                     weights_W=weights_W, biases_W=biases_W, weights_R=weights_R, biases_R=biases_R, weights_R_W=weights_R_W, biases_R_W=biases_R_W, weights_O_W=weights_O_W, biases_O_W=biases_O_W, \
+                     weights_A_E=weights_A_E, biases_A_E=biases_A_E, \
+                     moving_Var_1=moving_Var_1, moving_Mean_1=moving_Mean_1, gamma_1=gamma_1, beta_1=beta_1, weights_1=weights_1, biases_1=biases_1, \
+                     moving_Var_2=moving_Var_2, moving_Mean_2=moving_Mean_2, gamma_2=gamma_2, beta_2=beta_2, weights_2=weights_2, biases_2=biases_2, \
+                     moving_Var_3=moving_Var_3, moving_Mean_3=moving_Mean_3, gamma_3=gamma_3, beta_3=beta_3, weights_3=weights_3, biases_3=biases_3)              
 
     print("Generated {:.2f}s in {:.2f}s ({:.3f}x realtime)."
         .format(generated_seconds, elapsed, generated_seconds / elapsed))
